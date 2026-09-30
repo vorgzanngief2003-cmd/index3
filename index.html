@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>号令シミュレーター｜行進間・停止間の訓練</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+  --bg:#e9edf1;
+  --panel:#ffffff;
+  --ink:#0f1b33;
+  --muted:#5a6578;
+  --line:#ccd3dd;
+  --accent:#163a70;
+  --accent-ink:#ffffff;
+  --ground:#dde3e9;
+  --grid:#f6f8fa;
+  --person:#ffffff;
+  --stroke:#163a70;
+  --kijun:#f2b705;
+  --trail:#163a70;
+  --chip:#f1f4f8;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0c111b;
+    --panel:#151c2b;
+    --ink:#e8edf6;
+    --muted:#95a1b6;
+    --line:#2a3548;
+    --accent:#6f9cf0;
+    --accent-ink:#0c111b;
+    --ground:#1a2233;
+    --grid:#26314a;
+    --person:#e8edf6;
+    --stroke:#9db8f2;
+    --kijun:#f2b705;
+    --trail:#9db8f2;
+    --chip:#1d2638;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0c111b;
+  --panel:#151c2b;
+  --ink:#e8edf6;
+  --muted:#95a1b6;
+  --line:#2a3548;
+  --accent:#6f9cf0;
+  --accent-ink:#0c111b;
+  --ground:#1a2233;
+  --grid:#26314a;
+  --person:#e8edf6;
+  --stroke:#9db8f2;
+  --kijun:#f2b705;
+  --trail:#9db8f2;
+  --chip:#1d2638;
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px);height:100%}
+*,*::before,*::after{box-sizing:border-box}
+body{
+  margin:0;min-height:100%;background:var(--bg);color:var(--ink);
+  font-family:"Zen Kaku Gothic New","Hiragino Sans","Noto Sans JP","Yu Gothic",system-ui,sans-serif;
+  line-height:1.6;
+}
+.wrap{max-width:960px;margin:0 auto;padding:16px 14px 40px}
+h1{font-size:1.35rem;font-weight:900;margin:4px 0 2px;letter-spacing:.02em}
+.lead{margin:0 0 14px;color:var(--muted);font-size:.9rem}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;margin-bottom:12px;overflow:hidden}
+.now{display:flex;align-items:center;gap:14px;padding:10px 14px;border-bottom:1px solid var(--line);min-height:76px}
+.num{
+  flex:none;min-width:64px;text-align:center;font-weight:900;font-size:2.6rem;line-height:1;
+  color:var(--accent);
+}
+.num.long{font-size:1.5rem}
+.nowbody{flex:1;min-width:0}
+.nowtext{font-weight:700;font-size:1.15rem;overflow-wrap:anywhere}
+.nowsub{color:var(--muted);font-size:.85rem}
+.queue{flex:none;font-size:.8rem;color:var(--muted)}
+.cvwrap{position:relative;height:clamp(300px,50vh,520px);background:var(--ground)}
+canvas{position:absolute;inset:0;display:block;width:100%;height:100%}
+.legend{padding:8px 14px;font-size:.78rem;color:var(--muted);border-top:1px solid var(--line)}
+.pad{padding:12px 14px}
+.inputrow{display:flex;gap:8px}
+input[type=text]{
+  flex:1;min-width:0;font:inherit;font-size:1rem;padding:10px 12px;border-radius:8px;
+  border:1px solid var(--line);background:var(--bg);color:var(--ink);
+}
+button{
+  font:inherit;cursor:pointer;border-radius:8px;border:1px solid var(--line);
+  background:var(--chip);color:var(--ink);padding:9px 12px;
+}
+button:hover{border-color:var(--accent)}
+button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:700;padding:9px 18px}
+button.on{background:#c62828;color:#fff;border-color:#c62828}
+:focus-visible{outline:3px solid var(--kijun);outline-offset:2px}
+.msg{min-height:1.4em;margin:6px 2px 0;font-size:.85rem;color:var(--muted)}
+.msg.err{color:#c62828}
+.tools{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;margin-top:8px;font-size:.85rem}
+.tools label{display:flex;align-items:center;gap:6px}
+details{border-top:1px solid var(--line)}
+details:first-of-type{border-top:0}
+summary{cursor:pointer;padding:12px 14px;font-weight:700}
+.seg{display:flex;gap:6px;padding:10px 14px 4px}
+.seg button{flex:1;font-weight:700;padding:8px 10px}
+.seg button.sel{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.chips[hidden]{display:none}
+.chips{display:flex;flex-wrap:wrap;gap:8px;padding:0 14px 14px}
+.chip{display:inline-flex;align-items:baseline;gap:6px;font-size:.92rem;padding:7px 11px}
+.chip b{color:var(--accent);font-weight:900}
+h2{font-size:1rem;margin:0;padding:12px 14px 4px}
+ol.log{margin:0;padding:4px 14px 14px 36px;color:var(--muted);font-size:.9rem}
+ol.log li{padding:1px 0}
+ol.log li span{color:var(--accent);font-weight:700;margin-right:6px}
+@media (prefers-reduced-motion: reduce){*{scroll-behavior:auto!important}}
+@media (max-width:640px){
+  .wrap{padding:8px 8px 20px}
+  h1,.lead,.legend{display:none}
+  .card{margin-bottom:8px;border-radius:10px}
+  .screen{display:flex;flex-direction:column;
+    height:calc(100dvh - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px) - 16px)}
+  .stage{flex:1 1 auto;display:flex;flex-direction:column;min-height:0}
+  .stage .cvwrap{flex:1 1 auto;height:auto;min-height:150px}
+  .screen > .card:last-child{flex:none;margin-bottom:0}
+  .now{padding:4px 10px;min-height:0;gap:10px}
+  .num{min-width:44px;font-size:1.6rem}
+  .num.long{font-size:1rem}
+  .nowtext{font-size:.92rem;line-height:1.25}
+  .nowsub{font-size:.72rem;line-height:1.3}
+  .seg{padding:6px 6px 4px;gap:4px}
+  .seg button{padding:5px 8px;font-size:.85rem}
+  .chips{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;padding:0 6px 6px}
+  .chip{font-size:.7rem;line-height:1.2;padding:4px 4px;gap:3px;justify-content:flex-start;text-align:left}
+}
+</style>
+</head>
+<body>
+<main class="wrap">
+  <h1>号令シミュレーター</h1>
+  <p class="lead">行進間・停止間の下の号令を押すと、図の番号どおりに隊が動きます。</p>
+
+  <div class="screen">
+  <section class="card stage">
+    <div class="now" aria-live="polite">
+      <div class="num" id="num">—</div>
+      <div class="nowbody">
+        <div class="nowtext" id="nowText">号令を待っています</div>
+        <div class="nowsub" id="nowSub"></div>
+      </div>
+      <div class="queue" id="queueInfo"></div>
+    </div>
+    <div class="cvwrap"><canvas id="cv" role="img" aria-label="隊の動きを上から見た図"></canvas></div>
+    <div class="legend">▲＝基準　○＝隊員　短い線＝向き　点線＝軌跡（基準と最後尾）　<span id="viewNote">対面表示：隊は画面の下向きで、隊の左は画面の右に見えます</span></div>
+  </section>
+
+  <section class="card">
+    <div class="seg" role="tablist">
+      <button id="tabM" class="sel" role="tab" aria-selected="true">行進間</button>
+      <button id="tabS" role="tab" aria-selected="false">停止間</button>
+    </div>
+    <div class="chips" id="marchChips"></div>
+    <div class="chips" id="stopChips" hidden></div>
+  </section>
+
+  </div>
+
+  <section class="card pad">
+    <div class="tools" style="margin-top:0">
+      <button id="rand">ランダムに出す</button>
+      <button id="center">中央に戻す</button>
+      <button id="reset">最初に戻す</button>
+      <label>速さ <input id="spd" type="range" min="0.5" max="2" step="0.1" value="1"></label>
+      <label><input type="checkbox" id="trail" checked>軌跡を表示</label>
+      <label><input type="checkbox" id="fixed" checked>俯瞰（カメラ固定）</label>
+      <label><input type="checkbox" id="mirror" checked>対面表示（指揮官が隊と向かい合う）</label>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>履歴</h2>
+    <ol class="log" id="log"></ol>
+  </section>
+</main>
+
+<script>
+(()=>{
+"use strict";
+const N=4, D=30, V=110, R=8;
+const $=id=>document.getElementById(id);
+const rad=a=>a*Math.PI/180;
+const Hv=a=>({x:Math.cos(rad(a)),y:Math.sin(rad(a))});
+const smooth=t=>t*t*(3-2*t);
+const lerp=(a,b,t)=>a+(b-a)*t;
+
+/* ---------- 号令の定義 ---------- */
+const TEXT={
+  turnR:'右向け右', turnL:'左向け左', fwd:'前へ進め',
+  colR:'縦隊右へ進め', colL:'縦隊左へ進め',
+  turnR_f:'右向け前へ進め', turnL_f:'左向け前へ進め',
+  wheelL:'左に向きを変え進め', wheelR:'右に向きを変え進め',
+  makeL:'横隊作れ進め', makeR:'右に横隊作れ進め',
+  about_f:'回れ右前へ進め', about:'回れ右',
+  turnR_colL:'右向け縦隊左へ進め',
+  halfR:'半ば右向け前へ進め', halfL:'半ば左向け前へ進め',
+  stop:'分(小)隊止まれ'
+};
+/* m=行進間の番号 s=停止間の番号 mode=固定する場合 */
+const BADGE={
+  turnR:{m:'①',s:'①・④・⑫'},
+  turnL:{s:'⑥',mode:'停止間'},
+  fwd:{m:'②',mode:'行進間'},
+  colR:{m:'③',s:'②'},
+  colL:{m:'⑦',s:'⑦'},
+  turnR_f:{m:'④',mode:'行進間'},
+  turnL_f:{m:'⑥',mode:'行進間'},
+  wheelL:{m:'⑤',s:'⑤'},
+  wheelR:{m:'⑩・⑮',s:'⑪'},
+  makeL:{m:'⑧',s:'⑨'},
+  makeR:{m:'⑬',s:'⑬'},
+  about_f:{m:'⑨・⑪・⑭',mode:'行進間'},
+  about:{s:'⑩',mode:'停止間'},
+  turnR_colL:{m:'⑫',mode:'行進間'},
+  halfR:{m:'⑯',mode:'行進間'},
+  halfL:{m:'⑰',mode:'行進間'},
+  stop:{m:'⑱',s:'③・⑧・⑭'}
+};
+const MARCH=[
+  ['①','turnR'],['②','fwd'],['③','colR'],['④','turnR_f'],['⑤','wheelL'],['⑥','turnL_f'],
+  ['⑦','colL'],['⑧','makeL'],['⑨','about_f'],['⑩','wheelR'],['⑪','about_f'],['⑫','turnR_colL'],
+  ['⑬','makeR'],['⑭','about_f'],['⑮','wheelR'],['⑯','halfR'],['⑰','halfL'],['⑱','stop']
+];
+const STOPPED=[
+  ['①','turnR'],['②','colR'],['③','stop'],['④','turnR'],['⑤','wheelL'],['⑥','turnL'],['⑦','colL'],
+  ['⑧','stop'],['⑨','makeL'],['⑩','about'],['⑪','wheelR'],['⑫','turnR'],['⑬','makeR'],['⑭','stop']
+];
+const CIRC='①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱';
+
+/* ---------- 号令の解析 ---------- */
+const HIRA=[['みぎ','右'],['ひだり','左'],['まえ','前'],['すすめ','進め'],['とまれ','止まれ'],['まわれ','回れ'],
+  ['廻れ','回れ'],['むけ','向け'],['むき','向き'],['かえ','変え'],['じゅうたい','縦隊'],['おうたい','横隊'],
+  ['よこたい','横隊'],['つくれ','作れ'],['なかば','半ば']];
+function parse(raw){
+  let s=String(raw).trim();
+  if(!s) return null;
+  if(s.length===1 && CIRC.includes(s)) return MARCH[CIRC.indexOf(s)][1];
+  if(/^\d{1,2}$/.test(s) && +s>=1 && +s<=18) return MARCH[+s-1][1];
+  s=s.normalize('NFKC').replace(/[\s、。，,.!！?？「」『』()（）・〜~]/g,'');
+  for(const [a,b] of HIRA) s=s.split(a).join(b);
+  if(s.includes('半ば')) return /半ば左/.test(s)?'halfL':'halfR';
+  if(/止まれ/.test(s)) return 'stop';
+  if(/右向け縦隊左/.test(s)) return 'turnR_colL';
+  if(/縦隊右/.test(s)) return 'colR';
+  if(/縦隊左/.test(s)) return 'colL';
+  if(/右に横隊/.test(s)) return 'makeR';
+  if(/横隊作れ/.test(s)) return 'makeL';
+  if(/左に向きを変え/.test(s)) return 'wheelL';
+  if(/右に向きを変え/.test(s)) return 'wheelR';
+  if(/回れ右[前間]/.test(s)) return 'about_f';
+  if(/回れ右/.test(s)) return 'about';
+  if(/右向け前/.test(s)) return 'turnR_f';
+  if(/左向け前/.test(s)) return 'turnL_f';
+  if(/右向け/.test(s)) return 'turnR';
+  if(/左向け/.test(s)) return 'turnL';
+  if(/前へ|進め/.test(s)) return 'fwd';
+  return null;
+}
+
+/* ---------- 状態 ---------- */
+const state={pos:[],face:[],theta:-90,off:0,moving:false};
+let anim=null, steps=[], queue=[], curCmd=null, speed=1, showTrail=true, mirror=true, fixedView=true, edgeMsg=false, fieldW=900, fieldH=560;
+let trailA=[], trailB=[];
+const cam={x:0,y:0};
+
+function resetState(){
+  state.theta=-90; state.off=0; state.moving=false;
+  state.pos=[]; state.face=[];
+  const x0=(N-1)*D/2;
+  for(let i=0;i<N;i++){ state.pos.push({x:x0-i*D,y:0}); state.face.push(-90); }
+  anim=null; steps=[]; queue=[]; curCmd=null;
+  trailA=[]; trailB=[];
+  cam.x=0; cam.y=0;
+}
+const snap=()=>state.pos.map(p=>({x:p.x,y:p.y}));
+function formKind(){
+  const a=state.pos[0], b=state.pos[N-1];
+  const dx=b.x-a.x, dy=b.y-a.y, L=Math.hypot(dx,dy)||1;
+  const h=Hv(state.theta);
+  return Math.abs((dx*h.x+dy*h.y)/L)>0.7?'col':'line';
+}
+
+/* ---------- 動作（ステップ） ---------- */
+function stepTurn(delta,march,dur=0.9){
+  return ()=>{
+    const s0=snap(), f0=state.theta+state.off, th1=state.theta+delta;
+    const was=state.moving, will=was||march;
+    const A=was?V*dur:(march?V*dur*0.5:0), dir=Hv(th1);
+    return {dur,
+      fn:u=>{const g=was?u:u*u; const f=lerp(f0,th1,smooth(Math.min(1,u/0.5)));
+        return s0.map(p=>({x:p.x+dir.x*A*g,y:p.y+dir.y*A*g,f}));},
+      finish:()=>{state.theta=th1;state.off=0;state.moving=will;}};
+  };
+}
+function stepHalf(delta){
+  return ()=>{
+    const dur=0.8, s0=snap(), f0=state.theta+state.off, off1=state.off+delta, f1=state.theta+off1;
+    const was=state.moving;
+    const A=was?V*dur:V*dur*0.5, dir=Hv(f1);
+    return {dur,
+      fn:u=>{const g=was?u:u*u; const f=lerp(f0,f1,smooth(Math.min(1,u/0.5)));
+        return s0.map(p=>({x:p.x+dir.x*A*g,y:p.y+dir.y*A*g,f}));},
+      finish:()=>{state.off=off1;state.moving=true;}};
+  };
+}
+function stepFwd(){
+  return ()=>{
+    const was=state.moving, dur=was?0.4:0.9, s0=snap(), f=state.theta+state.off;
+    const A=was?V*dur:V*dur*0.5, dir=Hv(f);
+    return {dur,
+      fn:u=>{const g=was?u:u*u; return s0.map(p=>({x:p.x+dir.x*A*g,y:p.y+dir.y*A*g,f}));},
+      finish:()=>{state.moving=true;}};
+  };
+}
+function stepStop(){
+  return ()=>{
+    const was=state.moving, dur=was?0.7:0.4, s0=snap(), f=state.theta+state.off;
+    const A=was?26:0, dir=Hv(f);
+    return {dur,
+      fn:u=>{const g=1-(1-u)*(1-u); return s0.map(p=>({x:p.x+dir.x*A*g,y:p.y+dir.y*A*g,f}));},
+      finish:()=>{state.moving=false;}};
+  };
+}
+function stepEnsureCol(){
+  return ()=>{
+    if(formKind()==='col') return null;
+    const s0=snap(), h=Hv(state.theta), dur=0.7, was=state.moving;
+    const f=state.theta+state.off, dir=Hv(f), A=was?V*dur:0;
+    const tgt=s0.map((p,i)=>({x:s0[0].x-h.x*i*D,y:s0[0].y-h.y*i*D}));
+    return {dur,
+      fn:u=>{const e=smooth(u);
+        return s0.map((p,i)=>({x:lerp(p.x,tgt[i].x,e)+dir.x*A*u,y:lerp(p.y,tgt[i].y,e)+dir.y*A*u,f}));},
+      finish:()=>{}};
+  };
+}
+/* 縦隊の方向変換：先頭が曲がった場所を全員が同じ経路でたどる */
+function stepColTurn(delta,keep){
+  return ()=>{
+    const was=state.moving;
+    const s0=snap(), th=state.theta, th1=th+delta, h=Hv(th), h1=Hv(th1);
+    let hi=0, hv=-Infinity;
+    s0.forEach((p,i)=>{const d=p.x*h.x+p.y*h.y; if(d>hv){hv=d;hi=i;}});
+    const C={x:s0[hi].x+h.x*10,y:s0[hi].y+h.y*10};
+    const k=s0.map(p=>(C.x-p.x)*h.x+(C.y-p.y)*h.y);
+    const Dtot=Math.max(...k)+70, dur=Dtot/V, rr=13;
+    return {dur,
+      fn:u=>{
+        const s=Dtot*u;
+        return s0.map((p,i)=>{
+          const ki=k[i];
+          if(s<=ki-rr) return {x:p.x+h.x*s,y:p.y+h.y*s,f:th};
+          if(s>=ki+rr) return {x:C.x+h1.x*(s-ki),y:C.y+h1.y*(s-ki),f:th1};
+          const t=(s-(ki-rr))/(2*rr), m=1-t;
+          const A={x:C.x-h.x*rr,y:C.y-h.y*rr}, B={x:C.x+h1.x*rr,y:C.y+h1.y*rr};
+          return {x:m*m*A.x+2*m*t*C.x+t*t*B.x, y:m*m*A.y+2*m*t*C.y+t*t*B.y, f:lerp(th,th1,smooth(t))};
+        });
+      },
+      finish:()=>{state.theta=th1;state.off=0;state.moving=keep?was:true;}};
+  };
+}
+/* 横隊の方向変換：基準側の端を軸にして扇のように回る */
+function stepWheel(side){
+  return ()=>{
+    const s0=snap(), th0=state.theta, alpha=side*90, dur=2.4, r=Hv(th0+90), was=state.moving;
+    let best=0, bv=side<0?Infinity:-Infinity;
+    s0.forEach((p,i)=>{const pr=p.x*r.x+p.y*r.y; if(side<0?pr<bv:pr>bv){bv=pr;best=i;}});
+    const Q=s0[best];
+    return {dur,
+      fn:u=>{
+        const e=smooth(u), a=rad(alpha*e), ca=Math.cos(a), sa=Math.sin(a);
+        return s0.map(p=>{const dx=p.x-Q.x, dy=p.y-Q.y;
+          return {x:Q.x+dx*ca-dy*sa, y:Q.y+dx*sa+dy*ca, f:th0+alpha*e};});
+      },
+      finish:()=>{state.theta=th0+alpha;state.off=0;state.moving=was;}};
+  };
+}
+const stepWheelAuto=side=>()=> (formKind()==='col'? stepColTurn(side*90,true)() : stepWheel(side)());
+/* 横隊作れ：先頭を基準に、後ろの人が左（または右）に並ぶ */
+function stepMakeLine(side){
+  return ()=>{
+    const s0=snap(), th=state.theta, h=Hv(th), r=Hv(th+90), dur=2.2, was=state.moving, Adv=was?V*dur:0;
+    const idx=[...Array(N).keys()].sort((a,b)=>(s0[b].x*h.x+s0[b].y*h.y)-(s0[a].x*h.x+s0[a].y*h.y));
+    const rank=new Array(N); idx.forEach((pi,k)=>{rank[pi]=k;});
+    const head=s0[idx[0]];
+    const Hd={x:head.x+h.x*Adv,y:head.y+h.y*Adv};
+    const S=s0.map((p,i)=>({x:Hd.x+r.x*side*rank[i]*D,y:Hd.y+r.y*side*rank[i]*D}));
+    const C1=[], C2=[];
+    s0.forEach((p,i)=>{
+      const dist=Math.hypot(S[i].x-p.x,S[i].y-p.y), a=Math.max(15,dist*0.4);
+      C1.push({x:p.x+h.x*a,y:p.y+h.y*a});
+      C2.push({x:S[i].x-h.x*a,y:S[i].y-h.y*a});
+    });
+    return {dur,
+      fn:u=>s0.map((p,i)=>{
+        const m=1-u, c1=C1[i], c2=C2[i], s=S[i];
+        const x=m*m*m*p.x+3*m*m*u*c1.x+3*m*u*u*c2.x+u*u*u*s.x;
+        const y=m*m*m*p.y+3*m*m*u*c1.y+3*m*u*u*c2.y+u*u*u*s.y;
+        const dx=3*m*m*(c1.x-p.x)+6*m*u*(c2.x-c1.x)+3*u*u*(s.x-c2.x);
+        const dy=3*m*m*(c1.y-p.y)+6*m*u*(c2.y-c1.y)+3*u*u*(s.y-c2.y);
+        const f=(Math.abs(dx)+Math.abs(dy)<1e-6)?th:Math.atan2(dy,dx)*180/Math.PI;
+        return {x,y,f};
+      }),
+      finish:()=>{state.off=0;state.moving=was;}};
+  };
+}
+function buildSteps(code){
+  switch(code){
+    case 'turnR': return [stepTurn(90,false)];
+    case 'turnL': return [stepTurn(-90,false)];
+    case 'turnR_f': return [stepTurn(90,true)];
+    case 'turnL_f': return [stepTurn(-90,true)];
+    case 'about_f': return [stepTurn(180,true)];
+    case 'about': return [stepTurn(180,false)];
+    case 'fwd': return [stepFwd()];
+    case 'colR': return [stepEnsureCol(),stepColTurn(90)];
+    case 'colL': return [stepEnsureCol(),stepColTurn(-90)];
+    case 'makeL': return [stepEnsureCol(),stepMakeLine(-1)];
+    case 'makeR': return [stepEnsureCol(),stepMakeLine(1)];
+    case 'wheelL': return [stepWheelAuto(-1)];
+    case 'wheelR': return [stepWheelAuto(1)];
+    case 'turnR_colL': return [stepTurn(90,false,0.5),stepEnsureCol(),stepColTurn(-90)];
+    case 'halfR': return [stepHalf(45)];
+    case 'halfL': return [stepHalf(-45)];
+    case 'stop': return [stepStop()];
+  }
+  return [];
+}
+
+/* ---------- 実行管理 ---------- */
+function apply(res){
+  state.pos=res.map(r=>({x:r.x,y:r.y}));
+  state.face=res.map(r=>r.f);
+}
+function nextStep(){
+  while(steps.length){
+    const f=steps.shift(), a=f();
+    if(a){ anim=Object.assign({t:0},a); return true; }
+  }
+  return false;
+}
+function badgeText(code,mv){
+  const b=BADGE[code]||{};
+  const mode=b.mode||(mv?'行進間':'停止間');
+  const n=(mv?b.m:b.s)||b.m||b.s||'—';
+  return {mode,n};
+}
+function startCommand(c){
+  curCmd=c; edgeMsg=false;
+  const {mode,n}=badgeText(c.code,state.moving);
+  c.mode=mode;
+  const num=$('num'); num.textContent=n; num.classList.toggle('long',n.length>2);
+  $('nowText').textContent=TEXT[c.code];
+  addLog(mode,n,TEXT[c.code]);
+  steps=buildSteps(c.code);
+  hud();
+}
+function tick(dt){
+  if(anim){
+    anim.t+=dt;
+    const u=Math.min(1,anim.t/anim.dur);
+    apply(anim.fn(u));
+    if(u>=1){ if(anim.finish) anim.finish(); anim=null; }
+  }else if(!nextStep()){
+    if(fixedView) keepInField();
+    if(state.moving){
+      const h=Hv(state.theta+state.off);
+      state.pos.forEach(p=>{p.x+=h.x*V*dt;p.y+=h.y*V*dt;});
+    }
+    const f=state.theta+state.off;
+    state.face=state.pos.map(()=>f);
+    if(curCmd){ curCmd=null; hud(); }
+    if(queue.length) startCommand(queue.shift());
+  }
+  pushTrail();
+}
+function keepInField(){
+  const m=24, hx=fieldW/2-m, hy=fieldH/2-m;
+  let sx=0, sy=0;
+  let minX=Infinity,maxX=-Infinity,minY=Infinity,maxY=-Infinity;
+  state.pos.forEach(p=>{minX=Math.min(minX,p.x);maxX=Math.max(maxX,p.x);minY=Math.min(minY,p.y);maxY=Math.max(maxY,p.y);});
+  if(minX<-hx-10) sx=-hx-minX; else if(maxX>hx+10) sx=hx-maxX;
+  if(minY<-hy-10) sy=-hy-minY; else if(maxY>hy+10) sy=hy-maxY;
+  if(sx||sy){ state.pos.forEach(p=>{p.x+=sx;p.y+=sy;}); trailA=[]; trailB=[]; }
+  if(state.moving){
+    const h=Hv(state.theta+state.off);
+    const leaving=state.pos.some(p=>(Math.abs(p.x)>hx&&p.x*h.x>0)||(Math.abs(p.y)>hy&&p.y*h.y>0));
+    if(leaving){ state.moving=false; edgeMsg=true; }
+  }
+}
+function recenter(){
+  anim=null; steps=[]; queue=[]; curCmd=null; edgeMsg=false;
+  let cx=0,cy=0; state.pos.forEach(p=>{cx+=p.x;cy+=p.y;}); cx/=N; cy/=N;
+  state.pos=state.pos.map(p=>({x:p.x-cx,y:p.y-cy}));
+  state.moving=false; state.off=0;
+  trailA=[]; trailB=[];
+}
+function pushTrail(){
+  const add=(arr,p)=>{const l=arr[arr.length-1]; if(!l||Math.hypot(l.x-p.x,l.y-p.y)>5){arr.push({x:p.x,y:p.y}); if(arr.length>700) arr.shift();}};
+  add(trailA,state.pos[0]); add(trailB,state.pos[N-1]);
+}
+function enqueue(code){
+  queue.push({code});
+  if(!anim && !steps.length && !curCmd) startCommand(queue.shift());
+  hud();
+}
+function handleText(t){
+  const code=parse(t);
+  if(!code) return false;
+  enqueue(code);
+  return true;
+}
+
+/* ---------- 表示 ---------- */
+const ARROWS=['→','↘','↓','↙','←','↖','↑','↗'];
+function hud(){
+  const th=((state.theta%360)+360)%360;
+  const ar=ARROWS[Math.round((((th+(mirror?180:0))%360))/45)%8];
+  const kind=formKind()==='col'?'縦隊':'横隊';
+  const mode=state.moving?'行進間':'停止間';
+  const run=edgeMsg?'　端に着いたので停止':(curCmd?'　実行中':'');
+  $('nowSub').textContent=mode+'　'+kind+'　向き '+ar+run;
+  $('queueInfo').textContent=queue.length?('待機 '+queue.length):'';
+}
+function addLog(mode,n,text){
+  const li=document.createElement('li');
+  li.innerHTML='<span></span>';
+  li.firstChild.textContent=mode+n;
+  li.appendChild(document.createTextNode(text));
+  const ol=$('log');
+  ol.insertBefore(li,ol.firstChild);
+  while(ol.children.length>8) ol.removeChild(ol.lastChild);
+}
+
+const cv=$('cv'), ctx=cv.getContext('2d');
+let dpr=1, W=600, Hh=400, C={};
+function resize(){
+  dpr=Math.min(2,window.devicePixelRatio||1);
+  W=cv.clientWidth||600; Hh=cv.clientHeight||400;
+  cv.width=Math.round(W*dpr); cv.height=Math.round(Hh*dpr);
+  fieldH=560; fieldW=Math.max(300,fieldH*W/Hh);
+}
+function readColors(){
+  const cs=getComputedStyle(document.documentElement), g=n=>cs.getPropertyValue(n).trim();
+  C={grid:g('--grid'),person:g('--person'),stroke:g('--stroke'),kijun:g('--kijun'),trail:g('--trail')};
+}
+function updateCam(dt){
+  if(fixedView){ cam.x=0; cam.y=0; return; }
+  let cx=0, cy=0;
+  state.pos.forEach(p=>{cx+=p.x;cy+=p.y;});
+  cx/=N; cy/=N;
+  const k=1-Math.exp(-dt*5);
+  cam.x+=(cx-cam.x)*k; cam.y+=(cy-cam.y)*k;
+}
+function draw(){
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  ctx.clearRect(0,0,W,Hh);
+  const zoom=fixedView?Hh/fieldH:Math.min(1.15,Math.max(0.55,Math.min(W,Hh)/430));
+  const ox=W/2, oy=Hh/2;
+  const sg=mirror?-1:1, rot=mirror?Math.PI:0;
+  const tx=x=>sg*(x-cam.x)*zoom+ox, ty=y=>sg*(y-cam.y)*zoom+oy;
+  /* 練習場の白線 */
+  const g=72;
+  ctx.strokeStyle=C.grid; ctx.lineWidth=2;
+  const x0=Math.floor((cam.x-ox/zoom)/g)*g, x1=cam.x+ox/zoom+g;
+  const y0=Math.floor((cam.y-oy/zoom)/g)*g, y1=cam.y+oy/zoom+g;
+  ctx.beginPath();
+  for(let x=x0;x<=x1;x+=g){ctx.moveTo(tx(x),0);ctx.lineTo(tx(x),Hh);}
+  for(let y=y0;y<=y1;y+=g){ctx.moveTo(0,ty(y));ctx.lineTo(W,ty(y));}
+  ctx.stroke();
+  if(fixedView){
+    const a=tx(-fieldW/2+10), b=tx(fieldW/2-10), c=ty(-fieldH/2+10), d=ty(fieldH/2-10);
+    ctx.strokeStyle=C.stroke; ctx.globalAlpha=0.55; ctx.lineWidth=3;
+    ctx.strokeRect(Math.min(a,b),Math.min(c,d),Math.abs(b-a),Math.abs(d-c));
+    ctx.globalAlpha=1;
+  }
+  /* 軌跡 */
+  if(showTrail){
+    ctx.strokeStyle=C.trail; ctx.lineWidth=1.5; ctx.setLineDash([3,5]);
+    [trailA,trailB].forEach((tr,j)=>{
+      if(tr.length<2) return;
+      ctx.globalAlpha=j===0?0.75:0.4;
+      ctx.beginPath();
+      tr.forEach((p,i)=>{ if(i) ctx.lineTo(tx(p.x),ty(p.y)); else ctx.moveTo(tx(p.x),ty(p.y)); });
+      ctx.stroke();
+    });
+    ctx.globalAlpha=1; ctx.setLineDash([]);
+  }
+  /* 隊員 */
+  const r=R*zoom;
+  for(let i=N-1;i>=0;i--){
+    const p=state.pos[i], x=tx(p.x), y=ty(p.y), f=rad(state.face[i]||0)+rot;
+    ctx.lineWidth=2; ctx.strokeStyle=C.stroke;
+    if(i===0){
+      ctx.fillStyle=C.kijun;
+      ctx.beginPath();
+      ctx.moveTo(x+Math.cos(f)*(r+5),y+Math.sin(f)*(r+5));
+      ctx.lineTo(x+Math.cos(f+rad(140))*r*1.15,y+Math.sin(f+rad(140))*r*1.15);
+      ctx.lineTo(x+Math.cos(f-rad(140))*r*1.15,y+Math.sin(f-rad(140))*r*1.15);
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+    }else{
+      ctx.fillStyle=C.person;
+      ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fill(); ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(x+Math.cos(f)*r*0.25,y+Math.sin(f)*r*0.25);
+      ctx.lineTo(x+Math.cos(f)*(r+5),y+Math.sin(f)*(r+5));
+      ctx.stroke();
+    }
+  }
+}
+let last=performance.now();
+function frame(now){
+  const dt=Math.min(0.05,(now-last)/1000); last=now;
+  tick(dt*speed);
+  updateCam(dt);
+  hud();
+  draw();
+  requestAnimationFrame(frame);
+}
+
+/* ---------- 画面の部品 ---------- */
+function makeChips(el,list){
+  list.forEach(([n,code])=>{
+    const b=document.createElement('button');
+    b.className='chip';
+    b.innerHTML='<b></b><span></span>';
+    b.firstChild.textContent=n;
+    b.lastChild.textContent=TEXT[code];
+    b.addEventListener('click',()=>enqueue(code));
+    el.appendChild(b);
+  });
+}
+makeChips($('marchChips'),MARCH);
+makeChips($('stopChips'),STOPPED);
+let marchH=0;
+function showTab(stopped){
+  const m=$('marchChips'), s=$('stopChips');
+  if(!m.hidden) marchH=m.offsetHeight;
+  m.hidden=stopped; s.hidden=!stopped;
+  s.style.minHeight=stopped&&marchH?marchH+'px':'';
+  $('tabM').classList.toggle('sel',!stopped); $('tabS').classList.toggle('sel',stopped);
+  $('tabM').setAttribute('aria-selected',String(!stopped)); $('tabS').setAttribute('aria-selected',String(stopped));
+}
+$('tabM').addEventListener('click',()=>showTab(false));
+$('tabS').addEventListener('click',()=>showTab(true));
+$('rand').addEventListener('click',()=>{
+  const pick=MARCH[Math.floor(Math.random()*MARCH.length)][1];
+  enqueue(pick);
+});
+$('reset').addEventListener('click',()=>{
+  resetState(); $('num').textContent='—'; $('num').classList.remove('long');
+  $('nowText').textContent='号令を待っています'; $('log').innerHTML='';
+  hud();
+});
+$('center').addEventListener('click',()=>{ recenter(); hud(); });
+$('fixed').addEventListener('change',e=>{ fixedView=e.target.checked; trailA=[]; trailB=[]; if(fixedView){ cam.x=0;cam.y=0; } });
+$('spd').addEventListener('input',e=>{ speed=parseFloat(e.target.value); });
+$('trail').addEventListener('change',e=>{ showTrail=e.target.checked; });
+$('mirror').addEventListener('change',e=>{
+  mirror=e.target.checked;
+  $('viewNote').textContent=mirror?'対面表示：隊は画面の下向きで、隊の左は画面の右に見えます':'画面の上が正面です';
+});
+
+window.addEventListener('resize',resize);
+if(window.ResizeObserver) new ResizeObserver(resize).observe(cv.parentNode);
+if(window.matchMedia){ const mq=matchMedia('(prefers-color-scheme: dark)'); if(mq.addEventListener) mq.addEventListener('change',readColors); }
+window.__sim={state,parse,handleText,tick,formKind,queue:()=>queue.length,busy:()=>!!(anim||steps.length||curCmd)};
+resetState(); resize(); readColors(); hud();
+requestAnimationFrame(t=>{last=t;frame(t);});
+})();
+</script>
+</body>
+</html>
